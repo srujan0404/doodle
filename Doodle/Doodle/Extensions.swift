@@ -5,99 +5,84 @@
 ////  Created by Srujan on 2/23/24.
 ////
 //
-//import SwiftUI
-//import RealityKit
-//import UIKit
-//import Combine
-//
-//extension ModelEntity {
-//    
-//    static func loadTexture(from url: URL, completion: @escaping (RealityKit.Material) -> Void) {
-//            URLSession.shared.dataTask(with: url) { data, response, error in
-//                if let data = data, let image = UIImage(data: data), let cgImage = image.cgImage {
-//                    let texture = try? TextureResource.generate(from: cgImage, options: .init(semantic: .color))
-//                    if let texture = texture {
-//                        var material = SimpleMaterial(color: .white, isMetallic: false)
-//                        material.baseColor = MaterialColorParameter.texture(texture)
-//                        completion(material)
-//                    }
-//                }
-//            }.resume()
-//        }
-//        
-//        static func createCarouselEntity(imageUrls: [String]) -> ModelEntity {
-//            let parentEntity = ModelEntity(mesh: .generateBox(width: 0.5, height: 0.250, depth: 0))
-//            
-//            let childEntity = ModelEntity(mesh: .generateBox(width: 0.25, height: 0.125, depth: 0))
+import SwiftUI
+import RealityKit
+import UIKit
+import Combine
+
+extension ModelEntity {
+   
+   static func loadTexture(from url: URL, completion: @escaping (RealityKit.Material) -> Void) {
+           URLSession.shared.dataTask(with: url) { data, response, error in
+               if let data = data, let image = UIImage(data: data), let cgImage = image.cgImage {
+                   let texture = try? TextureResource.generate(from: cgImage, options: .init(semantic: .color))
+                   if let texture = texture {
+                       var material = SimpleMaterial(color: .white, isMetallic: false)
+                       material.baseColor = MaterialColorParameter.texture(texture)
+                       completion(material)
+                   }
+               }
+           }.resume()
+       }
+       
+       static func createCarouselEntity(imageUrls: [String]) -> ModelEntity {
+           let parentEntity = ModelEntity(mesh: .generateBox(width: 0.5, height: 0.250, depth: 0))
+           
+           let childEntity = ModelEntity(mesh: .generateBox(width: 0.25, height: 0.125, depth: 0))
+           parentEntity.addChild(childEntity)
+           
+           var materials = [RealityKit.Material]()
+           let urls = imageUrls.compactMap { URL(string: $0) }
+           let dispatchGroup = DispatchGroup()
+           
+           for url in urls {
+               dispatchGroup.enter()
+               loadTexture(from: url) { material in
+                   materials.append(material)
+                   dispatchGroup.leave()
+               }
+           }
+           
+           dispatchGroup.notify(queue: .main) {
+               var currentIndex = 0
+               Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { timer in
+                   if materials.isEmpty { return }
+                   childEntity.model?.materials = [materials[currentIndex]]
+                   currentIndex = (currentIndex + 1) % materials.count
+               }
+           }
+           
+           return parentEntity
+       }
+       
+       static func createHandEntity() -> ModelEntity {
+           let simpleMaterial = SimpleMaterial(color: UIColor(hex: "888888"), isMetallic: false)
+           let parentEntity = ModelEntity(mesh: .generateBox(width: 0.5, height: 0.250, depth: 0), materials: [simpleMaterial])
+           
+//            let childMaterial = SimpleMaterial(color: UIColor(hex: "000000"), isMetallic: false)
+//            let childEntity = ModelEntity(mesh: .generateBox(width: 0.25, height: 0.125, depth: 0), materials: [childMaterial])
 //            parentEntity.addChild(childEntity)
-//            
-//            var materials = [RealityKit.Material]()
-//            let urls = imageUrls.compactMap { URL(string: $0) }
-//            let dispatchGroup = DispatchGroup()
-//            
-//            for url in urls {
-//                dispatchGroup.enter()
-//                loadTexture(from: url) { material in
-//                    materials.append(material)
-//                    dispatchGroup.leave()
-//                }
-//            }
-//            
-//            dispatchGroup.notify(queue: .main) {
-//                var currentIndex = 0
-//                Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { timer in
-//                    if materials.isEmpty { return }
-//                    childEntity.model?.materials = [materials[currentIndex]]
-//                    currentIndex = (currentIndex + 1) % materials.count
-//                }
-//            }
-//            
-//            return parentEntity
-//        }
-//        
-//        static func createHandEntity() -> ModelEntity {
-//            let simpleMaterial = SimpleMaterial(color: UIColor(hex: "888888"), isMetallic: false)
-//            let parentEntity = ModelEntity(mesh: .generateBox(width: 0.5, height: 0.250, depth: 0), materials: [simpleMaterial])
-//            
-////            let childMaterial = SimpleMaterial(color: UIColor(hex: "000000"), isMetallic: false)
-////            let childEntity = ModelEntity(mesh: .generateBox(width: 0.25, height: 0.125, depth: 0), materials: [childMaterial])
-////            parentEntity.addChild(childEntity)
-//            
-//            let imageUrls = [
-//                "https://picsum.photos/200/300",
-//                "https://picsum.photos/200/301",
-//                "https://picsum.photos/200/302",
-//                "https://picsum.photos/200/303",
-//                "https://picsum.photos/200/304",
-//                "https://picsum.photos/200/305",
-//                "https://picsum.photos/200/306",
-//                "https://picsum.photos/200/307",
-//                "https://picsum.photos/200/308",
-//                "https://picsum.photos/200/309",
-//                "https://picsum.photos/200/310"
-//            ]
-//            
-//            let carouselEntity = createCarouselEntity(imageUrls: imageUrls)
-//            parentEntity.addChild(carouselEntity)
-//            
-//            return parentEntity
-//        }
-//    
-//    static func createEnvironmentEntity() -> Entity {
-//        let bgColor: UIColor = .white
-//        var material = UnlitMaterial()
-//        material.color = UnlitMaterial.BaseColor(tint: bgColor)
-//        
-//        let environment = Entity()
-//        environment.components.set(ModelComponent(
-//            mesh: .generateSphere(radius: 2000),
-//            materials: [material]
-//        ))
-//        environment.scale *= .init(x: -2, y: 2, z: 2)
-//        return environment
-//    }
-//    
-//}
+           
+           let imageUrls = [
+               "https://picsum.photos/200/300",
+               "https://picsum.photos/200/301",
+               "https://picsum.photos/200/302",
+               "https://picsum.photos/200/303",
+               "https://picsum.photos/200/304",
+               "https://picsum.photos/200/305",
+               "https://picsum.photos/200/306",
+               "https://picsum.photos/200/307",
+               "https://picsum.photos/200/308",
+               "https://picsum.photos/200/309",
+               "https://picsum.photos/200/310"
+           ]
+           
+           let carouselEntity = createCarouselEntity(imageUrls: imageUrls)
+           parentEntity.addChild(carouselEntity)
+           
+           return parentEntity
+       }
+}
 //
 //extension UIColor {
 //    convenience init(hex: String) {
